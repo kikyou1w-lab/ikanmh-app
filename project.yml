@@ -1,0 +1,21 @@
+# 漫小肆 iOS 原生阅读器
+# 数据只走自建 API，不加载原站网页，不接任何广告 SDK，没有广告位和弹窗。
+name: Ikanmh
+options:
+  bundleIdPrefix: com.kikyou1w
+  deploymentTarget:
+    iOS: "16.0"
+targets:
+  Ikanmh:
+    type: application
+    platform: iOS
+    sources:
+      - path: Sources
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.kikyou1w.ikanmh
+        PRODUCT_NAME: 漫小肆
+        INFOPLIST_KEY_CFBundleDisplayName: 漫小肆
+        MARKETING_VERSION: "1.0.0"
+        CURRENT_PROJECT_VERSION: "1"
+        SWIFT_VERSION: "5.0"
