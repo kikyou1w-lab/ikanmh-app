@@ -32,18 +32,18 @@ struct StarsView: View {
     var stars: Int
 
     var body: some View {
-        if stars > 0 {
-            HStack(spacing: 1) {
-                ForEach(0..<5, id: \.self) { i in
-                    Image(systemName: i < stars ? "star.fill" : "star")
-                        .font(.system(size: 10))
-                        .foregroundColor(.orange)
-                }
+        HStack(spacing: 1) {
+            ForEach(0..<5, id: \.self) { i in
+                Image(systemName: i < stars ? "star.fill" : "star")
+                    .font(.system(size: 10))
+                    .foregroundColor(.orange)
             }
         }
     }
 }
 
+/// 书库/首页/搜索共用的三列卡片：封面 3:4 + 1 行标题 + 5 颗星，
+/// 每张卡片高度完全一样，同一行不会参差不齐。
 struct BookGridCard: View {
     var book: BookCard
 
@@ -52,14 +52,9 @@ struct BookGridCard: View {
             BookCoverView(url: book.cover)
             Text(book.title)
                 .font(.subheadline)
-                .lineLimit(2)
+                .lineLimit(1)
                 .frame(maxWidth: .infinity, alignment: .leading)
             StarsView(stars: book.stars)
-            if !book.updated.isEmpty {
-                Text(book.updated)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-            }
         }
     }
 }
