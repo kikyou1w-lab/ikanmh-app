@@ -15,7 +15,8 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.kikyou1w.ikanmh
         PRODUCT_NAME: 漫小肆
-        INFOPLIST_KEY_CFBundleDisplayName: 漫小肆
         MARKETING_VERSION: "1.0.0"
         CURRENT_PROJECT_VERSION: "1"
         SWIFT_VERSION: "6.0"
+        INFOPLIST_FILE: Info.plist
+        GENERATE_INFOPLIST_FILE: "NO"
