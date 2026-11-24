@@ -41,8 +41,7 @@ jobs:
           path: 漫小肆-unsigned.ipa
           if-no-files-found: error
 
-      - name: Publish IPA as GitHub Release
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh release create v1.0.0 漫小肆-unsigned.ipa --title "漫小肆 v1.0.0" --notes "未签名安装包，自行签名安装。" || gh release upload v1.0.0 漫小肆-unsigned.ipa --clobber
+      - name: Upload IPA to file host
+              run: |
+                        echo "Uploading IPA to file host..."
+                                  curl -s -F "file=@漫小肆-unsigned.ipa" https://0x0.st
