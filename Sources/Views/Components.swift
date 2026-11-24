@@ -42,8 +42,8 @@ struct StarsView: View {
     }
 }
 
-/// 书库/首页/搜索共用的三列卡片：封面 3:4 + 1 行标题 + 5 颗星，
-/// 每张卡片高度完全一样，同一行不会参差不齐。
+/// 书库/首页/搜索共用的网格卡片：封面 3:4 + 1 行标题 + 5 颗星 + 1 行更新日期，
+/// 每张卡片高度完全一样，同一行不会参差不齐；没日期的书也占一行高度。
 struct BookGridCard: View {
     var book: BookCard
 
@@ -55,6 +55,10 @@ struct BookGridCard: View {
                 .lineLimit(1)
                 .frame(maxWidth: .infinity, alignment: .leading)
             StarsView(stars: book.stars)
+            Text(book.updated.isEmpty ? " " : book.updated)
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .lineLimit(1)
         }
     }
 }
