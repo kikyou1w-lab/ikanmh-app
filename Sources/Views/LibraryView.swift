@@ -55,8 +55,8 @@ struct LibraryView: View {
                     } else {
                         ScrollView {
                             LazyVGrid(
-                                columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())],
-                                spacing: 12
+                                columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())],
+                                spacing: 10
                             ) {
                                 ForEach(books) { book in
                                     NavigationLink(value: book) { BookGridCard(book: book) }
