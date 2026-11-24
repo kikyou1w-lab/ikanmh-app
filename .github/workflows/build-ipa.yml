@@ -26,7 +26,7 @@ jobs:
 
       - name: Package unsigned IPA
         run: |
-          APP_PATH="build/Build/Products/Release-iphoneos/Ikanmh.app"
+          APP_PATH="build/Build/Products/Release-iphoneos/漫小肆.app"
           test -d "$APP_PATH" || { echo "App not found at $APP_PATH"; find build -name "*.app" -type d; exit 1; }
           rm -rf Payload
           mkdir -p Payload
