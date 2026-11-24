@@ -1,27 +1,30 @@
 import SwiftUI
 
 /// 漫画封面（3:4），只加载 API 返回的封面图地址，走图片缓存。
+/// 外框先按格子宽度定死 3:4，图片只在框里填充裁剪，不让原图尺寸撑大卡片。
 struct BookCoverView: View {
     var url: String
 
     var body: some View {
-        CachedImage(url: url) { phase, _ in
-            switch phase {
-            case .success(let image):
-                Image(uiImage: image).resizable().scaledToFill()
-            case .failure:
-                Color.gray.opacity(0.3)
-                    .overlay {
-                        Image(systemName: "book.closed").foregroundColor(.secondary)
+        Color.clear
+            .aspectRatio(3.0 / 4.0, contentMode: .fit)
+            .overlay {
+                CachedImage(url: url) { phase, _ in
+                    switch phase {
+                    case .success(let image):
+                        Image(uiImage: image).resizable().scaledToFill()
+                    case .failure:
+                        Color.gray.opacity(0.3)
+                            .overlay {
+                                Image(systemName: "book.closed").foregroundColor(.secondary)
+                            }
+                    case .empty:
+                        Color.gray.opacity(0.15).overlay { ProgressView() }
                     }
-            case .empty:
-                Color.gray.opacity(0.15).overlay { ProgressView() }
+                }
             }
-        }
-        .aspectRatio(3.0 / 4.0, contentMode: .fill)
-        .frame(maxWidth: .infinity)
-        .clipped()
-        .cornerRadius(8)
+            .clipped()
+            .cornerRadius(8)
     }
 }
 
