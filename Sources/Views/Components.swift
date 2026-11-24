@@ -1,14 +1,14 @@
 import SwiftUI
 
-/// 漫画封面（3:4），只加载 API 返回的封面图地址。
+/// 漫画封面（3:4），只加载 API 返回的封面图地址，走图片缓存。
 struct BookCoverView: View {
     var url: String
 
     var body: some View {
-        AsyncImage(url: URL(string: url)) { phase in
+        CachedImage(url: url) { phase, _ in
             switch phase {
             case .success(let image):
-                image.resizable().scaledToFill()
+                Image(uiImage: image).resizable().scaledToFill()
             case .failure:
                 Color.gray.opacity(0.3)
                     .overlay {
@@ -16,8 +16,6 @@ struct BookCoverView: View {
                     }
             case .empty:
                 Color.gray.opacity(0.15).overlay { ProgressView() }
-            @unknown default:
-                Color.gray.opacity(0.15)
             }
         }
         .aspectRatio(3.0 / 4.0, contentMode: .fill)
