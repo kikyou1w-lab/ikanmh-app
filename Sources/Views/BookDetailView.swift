@@ -3,6 +3,7 @@ import SwiftUI
 struct ReaderTarget: Hashable {
     var book: BookDetail
     var chapter: ChapterRef
+    var startIndex: Int = 0
 }
 
 struct BookDetailView: View {
@@ -17,6 +18,12 @@ struct BookDetailView: View {
     var chapters: [ChapterRef] {
         guard let detail else { return [] }
         return reversed ? Array(detail.chapters.reversed()) : detail.chapters
+    }
+
+    /// 上次读到的那话（有断点续看进度时才有）。
+    var resumeChapterId: Int? {
+        guard let detail else { return nil }
+        return store.progress(for: detail.id)?.chapterId
     }
 
     var body: some View {
@@ -67,6 +74,14 @@ struct BookDetailView: View {
                         if !detail.description.isEmpty {
                             Text(detail.description).font(.body)
                         }
+                        if let p = store.progress(for: detail.id),
+                           let resumeChapter = detail.chapters.first(where: { $0.id == p.chapterId }) {
+                            NavigationLink(value: ReaderTarget(book: detail, chapter: resumeChapter, startIndex: p.pageIndex)) {
+                                Label("继续阅读 · \(p.chapterTitle)（第 \(p.pageIndex + 1) 张）", systemImage: "bookmark.fill")
+                                    .frame(maxWidth: .infinity)
+                            }
+                            .buttonStyle(.borderedProminent)
+                        }
                         HStack(spacing: 12) {
                             if let first = detail.chapters.first {
                                 NavigationLink(value: ReaderTarget(book: detail, chapter: first)) {
@@ -95,13 +110,20 @@ struct BookDetailView: View {
                         LazyVGrid(columns: [GridItem(.adaptive(minimum: 100))], spacing: 8) {
                             ForEach(chapters) { ch in
                                 NavigationLink(value: ReaderTarget(book: detail, chapter: ch)) {
-                                    Text(ch.title)
-                                        .font(.subheadline)
-                                        .lineLimit(1)
-                                        .frame(maxWidth: .infinity)
-                                        .padding(.vertical, 8)
-                                        .background(Color.secondary.opacity(0.12))
-                                        .cornerRadius(8)
+                                    HStack(spacing: 4) {
+                                        Text(ch.title)
+                                            .font(.subheadline)
+                                            .lineLimit(1)
+                                        if ch.id == resumeChapterId {
+                                            Image(systemName: "bookmark.fill")
+                                                .font(.caption2)
+                                                .foregroundColor(.orange)
+                                        }
+                                    }
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 8)
+                                    .background(Color.secondary.opacity(0.12))
+                                    .cornerRadius(8)
                                 }
                                 .buttonStyle(.plain)
                             }
@@ -116,7 +138,7 @@ struct BookDetailView: View {
         .navigationTitle(detail?.title ?? "")
         .navigationBarTitleDisplayMode(.inline)
         .navigationDestination(for: ReaderTarget.self) { target in
-            ReaderView(book: target.book, chapter: target.chapter)
+            ReaderView(book: target.book, chapter: target.chapter, startIndex: target.startIndex)
         }
         .task { await load() }
     }
