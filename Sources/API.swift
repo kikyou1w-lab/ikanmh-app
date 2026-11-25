@@ -113,7 +113,7 @@ struct BookCard: Identifiable, Codable, Hashable {
     }
 }
 
-struct HomeResponse: Decodable {
+struct HomeResponse: Codable {
     var latest: [BookCard]
     var popular: [BookCard]
     var finished: [BookCard]
