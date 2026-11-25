@@ -4,6 +4,22 @@ struct HomeView: View {
     @State private var home: HomeResponse?
     @State private var error: String?
     @State private var loading = false
+    @State private var refreshed = false
+
+    // 首页本地缓存：上次成功拉到的数据存一份，打开先显示旧内容、后台静默刷新，
+    // 接口再慢也不会白屏转圈；只有第一次打开（无缓存）才显示加载页。
+    private let homeCacheKey = "ikanmh.home.cache.v1"
+
+    private func loadCached() -> HomeResponse? {
+        guard let data = UserDefaults.standard.data(forKey: homeCacheKey) else { return nil }
+        return try? JSONDecoder().decode(HomeResponse.self, from: data)
+    }
+
+    private func saveCached(_ home: HomeResponse) {
+        if let data = try? JSONEncoder().encode(home) {
+            UserDefaults.standard.set(data, forKey: homeCacheKey)
+        }
+    }
 
     var body: some View {
         NavigationStack {
@@ -85,14 +101,24 @@ struct HomeView: View {
     }
 
     private func load(force: Bool = false) async {
-        if home != nil && !force { return }
+        if home == nil, let cached = loadCached() {
+            home = cached
+        }
+        if home != nil && !force && refreshed { return }
+        if loading { return }
         loading = true
         defer { loading = false }
         do {
-            home = try await IkanmhAPI.home()
+            let fresh = try await IkanmhAPI.home()
+            home = fresh
+            refreshed = true
             error = nil
+            saveCached(fresh)
         } catch {
-            self.error = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
+            // 有缓存内容在显示时静默失败，不弹错误页；无缓存才显示错误。
+            if home == nil {
+                self.error = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
+            }
         }
     }
 }
