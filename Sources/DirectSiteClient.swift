@@ -176,7 +176,13 @@ extension String {
 // MARK: - 站内 HTML 解析（从 worker.js 原样移植）
 
 enum SiteParse {
-    static let imgHost = "https://www.jjmhw12.top"
+    // 图床 www.jjmhw12.top 已死（2026-11-26 19:22 两家 DoH 均 NXDOMAIN），站内图片地址全指它；
+    // 同路径改走主站域名实测能出图，故所有图片地址一律换主站。
+    static let imgHost = "https://www.ikanmh.xyz"
+
+    static func fixImg(_ u: String?) -> String? {
+        u?.replacingOccurrences(of: "www.jjmhw12.top", with: "www.ikanmh.xyz")
+    }
 
     static func coverUrl(_ id: Int) -> String {
         "\(imgHost)/static/upload/book/\(id)/cover.jpg"
@@ -217,7 +223,7 @@ enum SiteParse {
             ?? clean(RX.first(#"<h2 class="title">\s*<a[^>]*>([^<]+)</a>"#, in: chunk).g(1)).nonEmpty
             ?? clean(RX.first(#"<p class="title">\s*<a[^>]*>([^<]+)</a>"#, in: chunk).g(1)).nonEmpty
             ?? ""
-        let cover = RX.first(#"background-image:\s*url\(([^)]+)\)"#, in: chunk).g(1) ?? coverUrl(id)
+        let cover = fixImg(RX.first(#"background-image:\s*url\(([^)]+)\)"#, in: chunk).g(1)) ?? coverUrl(id)
         var stars = Int(RX.first(#"mh-star-line star-(\d)"#, in: chunk).g(1) ?? "") ?? 0
         if stars == 0 {
             // 本月人气 swiper 用 <div class="star"><span class="active">…</span>
@@ -336,7 +342,7 @@ enum SiteParse {
                 let beforeEnd = Range(m.range, in: seg)!.lowerBound
                 let before = String(seg[seg.startIndex..<beforeEnd])
                 if let c = RX.first(#"background-image:\s*url\(([^)]+)\)"#, in: before).g(1) {
-                    cover = c
+                    cover = fixImg(c) ?? c
                 }
             }
             items.append(RankItem(rank: rank, id: id, title: title, cover: cover))
@@ -370,7 +376,7 @@ enum SiteParse {
             if description.hasSuffix("」") { description.removeLast() }
             description = description.trimmingCharacters(in: .whitespacesAndNewlines)
         }
-        let cover = RX.first(#"<img[^>]*src="(https://www\.jjmhw12\.top/static/upload/book/\d+/cover\.jpg)""#, in: html).g(1) ?? coverUrl(id)
+        let cover = fixImg(RX.first(#"<img[^>]*src="(https://www\.jjmhw12\.top/static/upload/book/\d+/cover\.jpg)""#, in: html).g(1)) ?? coverUrl(id)
         var chapters: [ChapterRef] = []
         var seen = Set<Int>()
         for groups in RX.all(#"<a href="/chapter/(\d+)" target="_blank" rel="nofollow">([^<]*)</a>"#, in: html) {
@@ -398,7 +404,7 @@ enum SiteParse {
         } else {
             chapterTitle = title
         }
-        let images = RX.all(#"data-original="([^"]+)""#, in: html).compactMap { $0.g(1) }
+        let images = RX.all(#"data-original="([^"]+)""#, in: html).compactMap { fixImg($0.g(1)) }
         let prevGroups = RX.first(#"<a[^>]*href="/chapter/(\d+)"[^>]*title="([^"]*)">上一章</a>"#, in: html)
         let nextGroups = RX.first(#"<a[^>]*href="/chapter/(\d+)"[^>]*title="([^"]*)">下一章</a>"#, in: html)
         let prev: ChapterRef? = {
