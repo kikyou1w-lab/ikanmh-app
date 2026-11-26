@@ -493,6 +493,32 @@ actor DirectSiteClient {
         throw lastError
     }
 
+    /// 更新日期缓存（和服务端 Worker 的 KV 日期缓存同一思路）：详情页的
+    /// 「更新时间」一天最多变一次，直连时没必要每次都逐本抓。UserDefaults
+    /// 存一份 id->日期（6 小时有效），只抓缓存里没有的书；新抓到的合并
+    /// 写回。直连首页冷算从 34 个详情页请求降到 1-2 个。
+    private let datesCacheKey = "ikanmh.dates.cache.v1"
+    private let datesCacheSavedAtKey = "ikanmh.dates.cache.v1.savedAt"
+    private let datesCacheTTL: TimeInterval = 6 * 3600
+
+    private func loadDatesCache() -> [Int: String] {
+        let savedAt = UserDefaults.standard.double(forKey: datesCacheSavedAtKey)
+        guard savedAt > 0, Date().timeIntervalSince1970 - savedAt < datesCacheTTL,
+              let raw = UserDefaults.standard.dictionary(forKey: datesCacheKey) as? [String: String] else {
+            return [:]
+        }
+        var map: [Int: String] = [:]
+        for (k, v) in raw { if let id = Int(k) { map[id] = v } }
+        return map
+    }
+
+    private func saveDatesCache(_ map: [Int: String]) {
+        var raw: [String: String] = [:]
+        for (k, v) in map.prefix(800) { raw[String(k)] = v }
+        UserDefaults.standard.set(raw, forKey: datesCacheKey)
+        UserDefaults.standard.set(Date().timeIntervalSince1970, forKey: datesCacheSavedAtKey)
+    }
+
     /// 列表页本身没有更新日期，只有详情页有「更新时间：YYYY-MM-DD」。
     /// 把列表里缺日期的书逐本去详情页抓回来补上，多个列表合起来去重
     /// （同一本书只抓一次）、每批 16 本并行、抓不到的留空。
@@ -505,8 +531,10 @@ actor DirectSiteClient {
                 order.append(b.id)
             }
         }
-        let need = Array(order.prefix(60))
-        var dates: [Int: String] = [:]
+        var need = Array(order.prefix(60))
+        // 先查日期缓存，只抓缓存里没有的
+        var dates = loadDatesCache()
+        need.removeAll { dates[$0] != nil }
         var start = 0
         while start < need.count {
             let chunk = Array(need[start..<min(start + 16, need.count)])
@@ -532,6 +560,10 @@ actor DirectSiteClient {
             }
             dates.merge(got) { _, new in new }
             start += 16
+        }
+        // 新抓到的日期写回缓存
+        if !need.isEmpty {
+            saveDatesCache(dates)
         }
         for li in lists.indices {
             for bi in lists[li].indices where lists[li][bi].updated.isEmpty {
