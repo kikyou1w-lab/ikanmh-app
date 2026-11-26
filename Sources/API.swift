@@ -4,7 +4,8 @@ import FoundationNetworking
 #endif
 
 /// 线上 API: https://ikanmh-api.kikyou1w.workers.dev
-/// App 所有数据只从这里拿（标题、封面、章节、图片地址），不直接加载原站网页，
+/// App 数据优先从这里拿；Worker 拿不到（非 200 或网络错）时自动切直连抓站
+/// （DirectSiteClient：手机直接抓源站，桌面 UA，四域名按序兜底），UI 不用改。
 /// 接口返回的数据本身不含任何广告元素，App 内也不接任何广告 SDK。
 enum IkanmhAPI {
     static let baseURL = URL(string: "https://ikanmh-api.kikyou1w.workers.dev")!
@@ -33,7 +34,10 @@ enum IkanmhAPI {
     }
 
     static func home() async throws -> HomeResponse {
-        try await get("api/home")
+        try await withFallback(
+            { try await get("api/home") },
+            { try await DirectSiteClient.shared.home() }
+        )
     }
 
     static func booklist(tag: String?, area: Int?, end: Int?, page: Int) async throws -> BookListResponse {
@@ -41,23 +45,57 @@ enum IkanmhAPI {
         if let tag, !tag.isEmpty, tag != "全部" { q["tag"] = tag }
         if let area, area >= 0 { q["area"] = String(area) }
         if let end, end >= 0 { q["end"] = String(end) }
-        return try await get("api/booklist", query: q)
+        return try await withFallback(
+            { try await get("api/booklist", query: q) },
+            { try await DirectSiteClient.shared.booklist(tag: tag, area: area, end: end, page: page) }
+        )
+    }
+
+    static func update(page: Int) async throws -> UpdateResponse {
+        try await withFallback(
+            { try await get("api/update", query: ["page": String(page)]) },
+            { try await DirectSiteClient.shared.update(page: page) }
+        )
     }
 
     static func rank() async throws -> RankResponse {
-        try await get("api/rank")
+        try await withFallback(
+            { try await get("api/rank") },
+            { try await DirectSiteClient.shared.rank() }
+        )
     }
 
     static func search(keyword: String) async throws -> SearchResponse {
-        try await get("api/search", query: ["keyword": keyword])
+        try await withFallback(
+            { try await get("api/search", query: ["keyword": keyword]) },
+            { try await DirectSiteClient.shared.search(keyword: keyword) }
+        )
     }
 
     static func book(id: Int) async throws -> BookDetail {
-        try await get("api/book/\(id)")
+        try await withFallback(
+            { try await get("api/book/\(id)") },
+            { try await DirectSiteClient.shared.book(id: id) }
+        )
     }
 
     static func chapter(id: Int) async throws -> ChapterDetail {
-        try await get("api/chapter/\(id)")
+        try await withFallback(
+            { try await get("api/chapter/\(id)") },
+            { try await DirectSiteClient.shared.chapter(id: id) }
+        )
+    }
+
+    /// 先走 Worker，失败（非 200、网络错、解析错）就切直连抓站
+    private static func withFallback<T>(
+        _ worker: () async throws -> T,
+        _ direct: () async throws -> T
+    ) async throws -> T {
+        do {
+            return try await worker()
+        } catch {
+            return try await direct()
+        }
     }
 }
 
