@@ -450,7 +450,9 @@ actor DirectSiteClient {
         var request = URLRequest(url: url)
         request.setValue(Self.desktopUA, forHTTPHeaderField: "User-Agent")
         request.setValue("text/html,application/xhtml+xml", forHTTPHeaderField: "Accept")
-        request.timeoutInterval = 30
+        // 直连是 Worker 挂了才走的兜底：手机出口被拦时连接会挂起，超时设 10 秒快速失败、
+        // 换下一个域名，别让用户对着空白等半天
+        request.timeoutInterval = 10
         let (data, response) = try await URLSession.shared.data(for: request)
         guard let http = response as? HTTPURLResponse, 200..<300 ~= http.statusCode else {
             throw DirectError.http((response as? HTTPURLResponse)?.statusCode ?? -1)

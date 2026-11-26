@@ -156,6 +156,9 @@ struct HomeResponse: Codable {
     var popular: [BookCard]
     var finished: [BookCard]
 
+    /// 三个列表全空等于没拿到数据，绝不能当内容显示或存进缓存
+    var isEmpty: Bool { latest.isEmpty && popular.isEmpty && finished.isEmpty }
+
     enum CodingKeys: String, CodingKey {
         case latest, popular, finished
     }
