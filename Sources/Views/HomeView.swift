@@ -11,11 +11,20 @@ struct HomeView: View {
     private let homeCacheKey = "ikanmh.home.cache.v1"
 
     private func loadCached() -> HomeResponse? {
-        guard let data = UserDefaults.standard.data(forKey: homeCacheKey) else { return nil }
-        return try? JSONDecoder().decode(HomeResponse.self, from: data)
+        guard let data = UserDefaults.standard.data(forKey: homeCacheKey),
+              let cached = try? JSONDecoder().decode(HomeResponse.self, from: data) else { return nil }
+        // 空缓存是 11-26 下午源站回 200 空页时存进去的脏数据：三个列表全空，
+        // 显示出来就是白屏。直接丢弃并清掉，下次重新拉。
+        guard !cached.isEmpty else {
+            UserDefaults.standard.removeObject(forKey: homeCacheKey)
+            return nil
+        }
+        return cached
     }
 
     private func saveCached(_ home: HomeResponse) {
+        // 全空不存，免得下次打开又白屏
+        guard !home.isEmpty else { return }
         if let data = try? JSONEncoder().encode(home) {
             UserDefaults.standard.set(data, forKey: homeCacheKey)
         }
@@ -26,7 +35,7 @@ struct HomeView: View {
             Group {
                 if loading && home == nil {
                     LoadingView()
-                } else if let home {
+                } else if let home, !home.isEmpty {
                     ScrollView {
                         VStack(alignment: .leading, spacing: 20) {
                             if !home.popular.isEmpty {
@@ -70,6 +79,9 @@ struct HomeView: View {
                     .refreshable { await load(force: true) }
                 } else if let error {
                     ErrorView(message: error) { Task { await load(force: true) } }
+                } else {
+                    // 兜底：任何状态都没命中时也别留白屏，显示加载中
+                    LoadingView()
                 }
             }
             .navigationTitle("漫小肆")
@@ -110,6 +122,11 @@ struct HomeView: View {
         defer { loading = false }
         do {
             let fresh = try await IkanmhAPI.home()
+            // 全空等于没拿到数据：不显示、不缓存，走错误页让用户点重试
+            guard !fresh.isEmpty else {
+                if home == nil { self.error = "没有拿到数据，请点重试" }
+                return
+            }
             home = fresh
             refreshed = true
             error = nil
